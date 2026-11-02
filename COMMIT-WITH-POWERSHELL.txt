@@ -1,0 +1,12 @@
+# Run in PowerShell after extracting this archive OVER your existing SureStream project folder.
+# Replace the path below with your actual project directory.
+$ProjectPath = "C:\path\to\your\pleziah-surestream"
+Set-Location $ProjectPath
+npm ci
+npm run typecheck
+npm run build
+if ($LASTEXITCODE -ne 0) { throw "Build/typecheck failed. Do not commit a broken release." }
+git status
+git add src/pages/LandingPage.tsx src/pages/WatchStudio.tsx src/index.css public/assets/beyond-limits-hero.jpg RELEASE-NOTES-V31.1.md COMMIT-WITH-POWERSHELL.txt
+git commit -m "Upgrade SureStream hero and live match experience; remove watch paywall CTA"
+git push origin main

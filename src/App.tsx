@@ -12,6 +12,8 @@ import MatchDetailsPage from '@/pages/MatchDetailsPage';
 import MatchesPage from '@/pages/MatchesPage';
 import ProfilePage from '@/pages/ProfilePage';
 import LiveMapPage from '@/pages/LiveMapPage';
+import LibraryPage from '@/pages/LibraryPage';
+import AdminDashboard from '@/pages/AdminDashboard';
 import { PleziahPage, CreatorDashboardPage, PleziahAdminPage } from '@/pages/PleziahHub';
 
 export default function App() {
@@ -21,6 +23,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Layout><LandingPage /></Layout>} />
         <Route path="/pleziah" element={<Layout><PleziahPage /></Layout>} />
+        <Route path="/library" element={<Layout><LibraryPage /></Layout>} />
         <Route path="/creator/dashboard" element={<Layout><CreatorDashboardPage /></Layout>} />
         <Route path="/admin/pleziah" element={<Layout><PleziahAdminPage /></Layout>} />
         <Route path="/penalty-rush" element={<ComingSoonPage />} />
@@ -43,7 +46,7 @@ export default function App() {
         <Route path="/settings" element={<Layout><PlaceholderPage title="Settings" description="Account and application settings." /></Layout>} />
         <Route path="/payments" element={<Layout><PlaceholderPage title="Payments" description="Payment history and transaction status." /></Layout>} />
         <Route path="/auth/callback" element={<Layout><AuthCallback /></Layout>} />
-        <Route path="/admin" element={<Layout><PlaceholderPage title="Admin" description="Protected administration area. Requires admin authorization." /></Layout>} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/privacy" element={<Layout><PlaceholderPage title="Privacy Policy" description="How SURESTREAM handles your data." /></Layout>} />
         <Route path="/terms" element={<Layout><PlaceholderPage title="Terms of Service" description="The terms and conditions for using SURESTREAM." /></Layout>} />
         <Route path="/contact" element={<Layout><PlaceholderPage title="Contact" description="Get in touch with the SURESTREAM team." /></Layout>} />

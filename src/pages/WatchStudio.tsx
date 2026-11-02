@@ -129,9 +129,7 @@ export function WatchPage() {
               <h3>Match information</h3>
               <p>{match ? `Match data supplied by the configured football provider. ${streamAvailability.status === 'found' ? 'SportSRC has returned source metadata; this API response does not contain a playable URL.' : 'No playable authorized video source has been supplied yet.'}` : 'We could not load a matching fixture from the configured provider. We do not fabricate scores or streams.'}</p>
             </div>
-            {match && !['LIVE','IN_PLAY','PAUSED','HALFTIME','INPROGRESS'].includes(String(match.status).toUpperCase()) && !['FINISHED','AWARDED','CANCELLED'].includes(String(match.status).toUpperCase()) && <button className="lime-button small" onClick={() => navigate(`/seats/${matchId || 'featured-match'}`)}>
-              <Sparkles size={15} /> Reserve seat · KES 50
-            </button>}
+            {/* Reservation/payment actions intentionally live on the match-details route, not the watch screen. */}
           </div>
           <button className="pr-buffer-link" onClick={() => navigate('/penalty-rush')}>
             <Zap size={15} /> Play Penalty Rush while you watch

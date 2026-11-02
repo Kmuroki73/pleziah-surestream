@@ -51,26 +51,74 @@ export function PleziahPage() {
     setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load]);
+  
   useEffect(() => {
     let active = true;
+
     const loadCreatorMedia = async () => {
-      if (!selectedCreator || !supabase) { setCreatorMedia([]); return; }
+      if (!selectedCreator || !supabase) {
+        setCreatorMedia([]);
+        return;
+      }
+
+      // Capture the non-null Supabase client for nested async callbacks.
+      const client = supabase;
+
       setMediaLoading(true);
-      const { data, error: mediaError } = await supabase.from('pleziah_media').select('id,creator_id,title,description,thumbnail_url,media_type,price,has_preview,duration_seconds').eq('creator_id', selectedCreator.id).eq('is_published', true).order('created_at', { ascending: false });
+
+      const { data, error: mediaError } = await client
+        .from('pleziah_media')
+        .select('id,creator_id,title,description,thumbnail_url,media_type,price,has_preview,duration_seconds')
+        .eq('creator_id', selectedCreator.id)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+
       if (!active) return;
-      if (mediaError || !data) { setCreatorMedia([]); setMediaLoading(false); return; }
-      const { data: paths } = await supabase.rpc('public_pleziah_preview_paths', { p_creator_id: selectedCreator.id });
-      const pathMap = new Map<string,string>((Array.isArray(paths)?paths:[]).map((row:any)=>[String(row.media_id),String(row.preview_path)] as [string,string]));
-      const items = await Promise.all((data as MediaItem[]).map(async item => {
-        const path = pathMap.get(item.id); if (!path) return item;
-        const { data: signed } = await supabase.storage.from('video-previews').createSignedUrl(path, 300);
-        return { ...item, previewUrl: signed?.signedUrl };
-      }));
-      if (active) { setCreatorMedia(items); setMediaLoading(false); }
+
+      if (mediaError || !data) {
+        setCreatorMedia([]);
+        setMediaLoading(false);
+        return;
+      }
+
+      const { data: paths } = await client.rpc(
+        'public_pleziah_preview_paths',
+        { p_creator_id: selectedCreator.id }
+      );
+
+      const pathMap = new Map<string, string>(
+        (Array.isArray(paths) ? paths : []).map((row: any) => [
+          String(row.media_id),
+          String(row.preview_path)
+        ] as [string, string])
+      );
+
+      const items = await Promise.all(
+        (data as MediaItem[]).map(async item => {
+          const path = pathMap.get(item.id);
+          if (!path) return item;
+
+          const { data: signed } = await client.storage
+            .from('video-previews')
+            .createSignedUrl(path, 300);
+
+          return { ...item, previewUrl: signed?.signedUrl };
+        })
+      );
+
+      if (active) {
+        setCreatorMedia(items);
+        setMediaLoading(false);
+      }
     };
+
     void loadCreatorMedia();
-    return () => { active = false; };
+
+    return () => {
+      active = false;
+    };
   }, [selectedCreator]);
+
   const filtered = creators.filter(c => (`${c.display_name} ${c.username} ${c.bio ?? ''} ${(c.content_categories ?? []).join(' ')}`).toLowerCase().includes(query.toLowerCase()) && (filter === 'All' || (filter === 'Live now' ? c.availability_status === 'live' : (c.content_categories ?? []).includes(filter))));
   return <div className="pz-page"><section className="pz-hero"><div className="pz-hero-copy"><span className="pz-eyebrow"><Sparkles size={14}/> PLEZIAH · ADULTS ONLY · 18+</span><h1>Your vibe.<br/><em>Your creators.</em></h1><p>Discover independent adult creators, explore their profiles, and choose sessions or premium media packs on their terms.</p><div className="pz-hero-actions"><a className="pz-primary pz-link-button" href="#creators">Explore creators <ArrowUpRight size={17}/></a><Link className="pz-secondary" to="/creator/dashboard">Become a creator</Link></div><div className="pz-trust-row"><span><ShieldCheck size={15}/> 18+ only</span><span><BadgeCheck size={15}/> Approved profiles</span><span><LockKeyhole size={15}/> Secure account access</span></div></div><div className="pz-hero-art"><div className="pz-orbit pz-orbit-one"/><div className="pz-orbit pz-orbit-two"/><div className="pz-glow-card"><div className="pz-play-mark"><Play size={27} fill="currentColor"/></div><span>CREATOR-LED</span><strong>PLEZIAH</strong><small>Play for pleasure.</small></div><div className="pz-float-chip"><Radio size={15}/><span>Live status shown when verified</span></div></div></section>
     <section className="pz-section" id="creators"><div className="pz-section-head"><div><span className="pz-eyebrow">THE CREATOR DIRECTORY</span><h2>Find your kind of creator</h2><p>Only approved, published profiles appear here.</p></div><button className="pz-refresh" onClick={()=>void load()} disabled={loading}><RefreshCw size={15}/> Refresh</button></div><div className="pz-discovery"><div className="pz-search"><CircleUserRound size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search creators or categories"/></div><div className="pz-filters">{['All','Live now','Solo','Couples','LGBTQ+','Sensual','Cosplay'].map(f=><button key={f} className={filter===f?'active':''} onClick={()=>setFilter(f)}>{f}</button>)}</div></div>

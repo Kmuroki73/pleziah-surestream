@@ -6,11 +6,11 @@ import {
   ShieldCheck, CalendarDays, Headphones, CircleHelp, MessageSquare,
 } from 'lucide-react';
 
-const heroImage = '/assets/stadium-hero.jpg';
+const heroImage = '/assets/beyond-limits-hero.jpg';
 const matchImage = '/assets/matchday-banner.jpg';
 const playerImage = '/assets/yamal-goalkeeper.png';
 
-type Fixture = { id: number; home: string; away: string; homeNick: string; awayNick: string; competition: string; kickoff: string; status: 'live'|'upcoming'|'finished'; score: string; minute: string; stadium: string; homeCrest?: string|null; awayCrest?: string|null };
+type Fixture = { id: number | string; home: string; away: string; homeNick: string; awayNick: string; competition: string; kickoff: string; status: 'live'|'upcoming'|'finished'; score: string; minute: string; stadium: string; homeCrest?: string|null; awayCrest?: string|null };
 
 
 const competitions = [
@@ -41,7 +41,7 @@ export default function LandingPage() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || 'Football data is temporarily unavailable.');
         const rows: Fixture[] = (body.matches || []).map((m: any) => {
-          const status: Fixture['status'] = ['IN_PLAY','PAUSED','LIVE','HALFTIME'].includes(m.status) ? 'live' : ['FINISHED','AWARDED'].includes(m.status) ? 'finished' : 'upcoming';
+          const status: Fixture['status'] = ['IN_PLAY','INPLAY','INPROGRESS','IN_PROGRESS','PAUSED','LIVE','HALFTIME','1H','2H','ET','PENALTIES'].includes(String(m.status || '').toUpperCase()) ? 'live' : ['FINISHED','FT','AWARDED','CANCELLED','POSTPONED'].includes(String(m.status || '').toUpperCase()) ? 'finished' : 'upcoming';
           const time = new Date(m.kickoff);
           return { id: m.id, home: m.home, away: m.away, homeNick: m.homeShort || '', awayNick: m.awayShort || '', competition: m.competition, kickoff: time.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }), status, score: m.homeScore == null || m.awayScore == null ? '—' : `${m.homeScore} — ${m.awayScore}`, minute: m.minute ? `${m.minute}\'` : status === 'live' ? 'LIVE' : '', stadium: m.venue || 'Venue not supplied', homeCrest: m.homeCrest, awayCrest: m.awayCrest };
         });
@@ -63,51 +63,36 @@ export default function LandingPage() {
 
   return (
     <>
-      {/* HERO */}
-      <section className="hero-card">
-        <img src={heroImage} alt="Floodlit football stadium at night" />
-        <div className="hero-shade" />
-        <div className="hero-grid" />
-        <div className="hero-content">
-          <div className="eyebrow lime-text"><span className="live-pulse" /> SURESTREAM · LIVE FOOTBALL</div>
-          <h1>90 MINUTES.<br /><em>ZERO DISTANCE FROM THE ACTION.</em></h1>
-          <p>Follow the live game. Feel every moment. Challenge the fans. When the match pauses, the competition doesn't.</p>
-          <div className="hero-actions">
-            <button className="lime-button" onClick={() => navigate('/watch')}>
-              <Play size={16} fill="currentColor" /> WATCH LIVE GAMES
-            </button>
-            <button className="ghost-button" onClick={() => navigate('/penalty-rush')}>
-              <Zap size={16} /> PLAY PENALTY RUSH
-            </button>
-          </div>
-          <div className="hero-meta">
-            <span><Users size={14} /> Real fixtures from the configured data provider</span>
-            <span><LockKeyhole size={14} /> No login required</span>
-          </div>
+      {/* CINEMATIC HERO — supplied Beyond Limits artwork */}
+      <section className="hero-card hero-artwork" aria-label="SureStream Football Beyond Limits">
+        <img src={heroImage} alt="Football Beyond Limits: Harry Kane, Lamine Yamal, Kylian Mbappé and Erling Haaland" />
+        <div className="hero-artwork-shade" />
+        <button className="hero-artwork-cta" onClick={() => {
+          const live = fixtures.find(f => f.status === 'live');
+          navigate(live ? `/watch/${live.id}` : '/matches');
+        }}><Play size={15} fill="currentColor" /> {fixtures.some(f => f.status === 'live') ? 'WATCH LIVE NOW' : 'EXPLORE MATCHES'} <ArrowUpRight size={14}/></button>
+      </section>
+
+      {/* LIVE NOW / FEATURED MATCHES — real provider data only; no fabricated view counts */}
+      <section className="live-match-rail" aria-label="Live and featured matches">
+        <div className="live-rail-heading">
+          <div><span className="live-rail-dot" /><h2>{fixtures.some(f => f.status === 'live') ? 'Live Now' : 'Featured Matches'}</h2><span>{fixtures.some(f => f.status === 'live') ? 'Follow the action as it happens' : 'Upcoming fixtures from the verified feed'}</span></div>
+          <button onClick={() => navigate('/matches')}>View all <ArrowUpRight size={14}/></button>
         </div>
-        <div className="hero-live-console">
-          <div className="console-top">
-            <span className="live-badge"><span className="live-pulse" /> MATCH CENTRE</span>
-            <span>Live data feed</span>
-          </div>
-          <div className="console-screen">
-            <img src={matchImage} alt="Football stadium preview artwork" />
-            <div className="console-screen-shade" />
-            <button className="console-play" onClick={() => navigate('/watch')} aria-label="Open The Stands">
-              <Play size={22} fill="currentColor" />
+        <div className="live-rail-cards">
+          {(fixtures.some(f => f.status === 'live') ? fixtures.filter(f => f.status === 'live') : fixtures.filter(f => f.status === 'upcoming')).slice(0,8).map(f => (
+            <button className={`live-rail-card ${f.status !== 'live' ? 'upcoming' : ''}`} key={f.id} onClick={() => navigate(f.status === 'upcoming' ? `/match/${f.id}` : `/watch/${f.id}`)}>
+              <div className="live-rail-card-top"><span>{f.competition}</span>{f.status === 'live' ? <><b><i/> LIVE</b><strong>{f.minute || 'LIVE'}</strong></> : <b>UP NEXT</b>}</div>
+              <div className="live-rail-teams">
+                <span className="live-rail-crest">{f.homeCrest ? <img src={f.homeCrest} alt="" loading="lazy" onError={e => {e.currentTarget.style.display='none';}}/> : f.home.slice(0,3).toUpperCase()}</span>
+                <span className="live-rail-score">{f.status === 'upcoming' ? 'VS' : f.score}</span>
+                <span className="live-rail-crest">{f.awayCrest ? <img src={f.awayCrest} alt="" loading="lazy" onError={e => {e.currentTarget.style.display='none';}}/> : f.away.slice(0,3).toUpperCase()}</span>
+              </div>
+              <div className="live-rail-teamnames"><span>{f.home}</span><span>{f.away}</span></div>
+              <div className="live-rail-card-bottom"><span>{f.status === 'live' ? <><Eye size={13}/> Live score</> : <><Clock3 size={13}/> {f.kickoff}</>}</span><span>{f.status === 'live' ? 'Watch match' : 'Match details'} <ArrowUpRight size={12}/></span></div>
             </button>
-            <span className="console-quality">STADIUM PREVIEW</span>
-          </div>
-          <div className="console-score">
-            <div><strong>{featuredMatch?.homeNick || featuredMatch?.home?.slice(0, 3).toUpperCase() || 'HOME'}</strong><span>{featuredMatch?.home || 'Awaiting verified fixture'}</span></div>
-            <b>{featuredMatch && featuredMatch.status !== 'upcoming' ? `${featuredMatch.score}` : 'VS'}</b>
-            <div className="away"><strong>{featuredMatch?.awayNick || featuredMatch?.away?.slice(0, 3).toUpperCase() || 'AWAY'}</strong><span>{featuredMatch?.away || 'Live data will appear here'}</span></div>
-          </div>
-          <div className="console-footer">
-            <span><Users size={13} /> Join The Stands</span>
-            <span><span className="seat-dot" /> {featuredMatch ? (featuredMatch.status === 'live' ? 'Live match data' : featuredMatch.status === 'finished' ? 'Final result' : 'Verified fixture') : 'Awaiting provider data'}</span>
-            <button onClick={() => navigate('/watch')}>Open The Stands <ArrowUpRight size={13} /></button>
-          </div>
+          ))}
+          {!fixturesLoading && fixtures.length === 0 && <p className="live-rail-empty">Verified match cards will appear when the football data feed is available.</p>}
         </div>
       </section>
 
@@ -126,7 +111,7 @@ export default function LandingPage() {
       {/* DATA STATUS BANNER */}
       <div className="data-banner">
         <span className="data-banner-icon"><CircleHelp size={14} /></span>
-        <span>{fixturesLoading ? 'Connecting to the football data feed…' : fixturesError ? `${fixturesError} Add SPORTMONKS_API_KEY in Vercel and redeploy.` : `Verified feed: ${dataProvider || 'football data provider'} · refreshed automatically · ${fixtures.length} matches returned. Scores appear only when supplied by the provider.`}</span>
+        <span>{fixturesLoading ? 'Connecting to the football data feed…' : fixturesError ? `${fixturesError} Check SPORTSRC_API_KEY in Vercel and redeploy.` : `Verified feed: ${dataProvider || 'football data provider'} · refreshed automatically · ${fixtures.length} matches returned. Scores appear only when supplied by the provider.`}</span>
       </div>
 
       {/* FIXTURES */}

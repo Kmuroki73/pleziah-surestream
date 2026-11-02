@@ -52,3 +52,31 @@ npm run build
 ```
 
 Vercel should build the project root (the folder containing `package.json` and `vercel.json`) with `npm run build`, output directory `dist`. This working environment could not download npm packages because the npm registry returned DNS/network errors, so a final Vite production build could not be verified here. Run the commands above in Vercel or a connected local environment before treating this as a production-verified deployment.
+
+
+## Final integration verification — 29 October 2026
+
+### RapidAPI
+The project now documents the required server-only environment variables in `.env.example`:
+- `RAPIDAPI_KEY`
+- `RAPIDAPI_HOST`
+- `RAPIDAPI_BASE_URL`
+- `RAPIDAPI_ENDPOINT`
+
+Do not paste a real key into source files, browser code, or Git. The actual API name/listing URL and endpoint schema were not supplied with this archive, so an executable RapidAPI request cannot be safely implemented yet. Set the variables in Vercel only after confirming the API's endpoint and required parameters. An adult-content provider should be used only for content legally available for redistribution/embedding and verified to involve adults.
+
+### Google OAuth redirect
+`src/pages/PleziahHub.tsx` constructs the OAuth redirect from `window.location.origin` and `/auth/callback`; `src/pages/AuthCallback.tsx` then reads the Supabase session. This source does not hard-code `localhost:3000` in that flow. If production still redirects to localhost, check:
+1. Supabase Dashboard → Authentication → URL Configuration → Site URL should be `https://pleziah.top`.
+2. Add `https://pleziah.top/auth/callback` to Redirect URLs (and the actual Vercel production domain if also used).
+3. Google Cloud OAuth client → Authorized redirect URI must be the Supabase callback URL, normally `https://<project-ref>.supabase.co/auth/v1/callback`, not `localhost:3000`.
+4. Verify the deployed Vercel project is built from this repository/branch and contains the latest commit. Clear stale deployment/cache by redeploying after settings are corrected.
+5. A Supabase `Unable to exchange external code` error may also indicate Google OAuth client/secret mismatch, expired/reused authorization code, or a mismatched redirect URI. Inspect Supabase Auth logs.
+
+### What is present in this source archive
+- SportMonks proxy at `api/matches.ts` keeps the provider key server-side and normalizes fixture fields.
+- Landing page uses `public/assets/beyond-limits-hero.jpg` and includes a live-match rail.
+- Watch page checks for stream-source metadata; it does not manufacture a playable stream URL. Actual playback requires a licensed, playable stream URL.
+- Live Match Intelligence intentionally shows an honest empty state when the provider has no live fixtures or licensed event coordinates.
+- Pleziah creator and media UI is in `src/pages/PleziahHub.tsx`, backed by Supabase. Published/approved visibility depends on the database rows, policies, storage paths and creator approval flags.
+- The RapidAPI content page, product/toy catalogue and persistent comments cannot be claimed integrated by this archive alone: the RapidAPI endpoint schema and a configured product/comment data source are not present in the supplied source. Do not show fake API results or claim comments are persisted until the schema/backend is connected.
