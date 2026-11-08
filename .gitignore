@@ -22,8 +22,7 @@ dist-ssr
 *.sw?
 .env
 
+# Local secrets
 .env
 .env.*
 !.env.example
-node_modules/
-dist/
