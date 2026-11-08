@@ -1,0 +1,175 @@
+{
+  "source": "ForeignLove V35 dist/assets/model-media",
+  "grouping_note": "Video-to-model grouping is provisional and based on nearest capture timestamp in filenames; verify creator ownership before public release.",
+  "models": [
+    {
+      "id": "fay",
+      "name": "Fay",
+      "username": "fay",
+      "photo": "/assets/model-media/IMG_20261106_140650_093.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_140650_093.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_140205_941.mp4",
+        "/assets/model-media/VID_20261106_140234_532.mp4",
+        "/assets/model-media/VID_20261106_140544_663.mp4"
+      ]
+    },
+    {
+      "id": "jane",
+      "name": "Jane",
+      "username": "jane",
+      "photo": "/assets/model-media/IMG_20261106_143937_269.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_143937_269.jpg"
+      ],
+      "videos": []
+    },
+    {
+      "id": "kate",
+      "name": "Kate",
+      "username": "kate",
+      "photo": "/assets/model-media/IMG_20261106_140721_930.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_140721_930.jpg"
+      ],
+      "videos": []
+    },
+    {
+      "id": "kelly",
+      "name": "Kelly",
+      "username": "kelly",
+      "photo": "/assets/model-media/IMG_20261106_140750_488.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_140750_488.jpg"
+      ],
+      "videos": []
+    },
+    {
+      "id": "mariah",
+      "name": "Mariah",
+      "username": "mariah",
+      "photo": "/assets/model-media/IMG_20261106_141004_207.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_141004_207.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_141027_986.mp4",
+        "/assets/model-media/VID_20261106_141049_924.mp4"
+      ]
+    },
+    {
+      "id": "marya",
+      "name": "Marya",
+      "username": "marya",
+      "photo": "/assets/model-media/IMG_20261106_141632_097.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_141632_097.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_141802_447.mp4",
+        "/assets/model-media/VID_20261106_141824_039.mp4",
+        "/assets/model-media/VID_20261106_141827_286.mp4",
+        "/assets/model-media/VID_20261106_141839_064.mp4"
+      ]
+    },
+    {
+      "id": "maya",
+      "name": "Maya",
+      "username": "maya",
+      "photo": "/assets/model-media/IMG_20261106_142054_573.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_142054_573.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_141858_657.mp4",
+        "/assets/model-media/VID_20261106_141903_901.mp4",
+        "/assets/model-media/VID_20261106_141912_021.mp4",
+        "/assets/model-media/VID_20261106_141921_828.mp4",
+        "/assets/model-media/VID_20261106_142023_220.mp4",
+        "/assets/model-media/VID_20261106_142106_010.mp4",
+        "/assets/model-media/VID_20261106_142124_148.mp4"
+      ]
+    },
+    {
+      "id": "mercie",
+      "name": "Mercie",
+      "username": "mercie",
+      "photo": "/assets/model-media/IMG_20261106_142258_157.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_142258_157.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_142308_107.mp4"
+      ]
+    },
+    {
+      "id": "nicki",
+      "name": "Nicki",
+      "username": "nicki",
+      "photo": "/assets/model-media/IMG_20261106_142448_152.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_142448_152.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_142442_592.mp4"
+      ]
+    },
+    {
+      "id": "phylis",
+      "name": "Phylis",
+      "username": "phylis",
+      "photo": "/assets/model-media/IMG_20261106_142500_709.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_142500_709.jpg"
+      ],
+      "videos": []
+    },
+    {
+      "id": "precious",
+      "name": "Precious",
+      "username": "precious",
+      "photo": "/assets/model-media/IMG_20261106_142504_909.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_142504_909.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_142524_557.mp4"
+      ]
+    },
+    {
+      "id": "regina",
+      "name": "Regina",
+      "username": "regina",
+      "photo": "/assets/model-media/IMG_20261106_143826_305.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_143826_305.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_143429_641.mp4",
+        "/assets/model-media/VID_20261106_143446_274.mp4",
+        "/assets/model-media/VID_20261106_143517_467.mp4",
+        "/assets/model-media/VID_20261106_143522_353.mp4",
+        "/assets/model-media/VID_20261106_143609_284.mp4",
+        "/assets/model-media/VID_20261106_143650_605.mp4",
+        "/assets/model-media/VID_20261106_143714_854.mp4",
+        "/assets/model-media/VID_20261106_143742_015.mp4",
+        "/assets/model-media/VID_20261106_143749_459.mp4"
+      ]
+    },
+    {
+      "id": "sharon",
+      "name": "Sharon",
+      "username": "sharon",
+      "photo": "/assets/model-media/IMG_20261106_143832_165.jpg",
+      "photos": [
+        "/assets/model-media/IMG_20261106_143832_165.jpg"
+      ],
+      "videos": [
+        "/assets/model-media/VID_20261106_143929_978.mp4",
+        "/assets/model-media/VID_20261106_143954_462.mp4"
+      ]
+    }
+  ]
+}

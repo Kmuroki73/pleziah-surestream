@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { ArrowUpRight, BadgeCheck, CircleUserRound, Heart, LockKeyhole, LogOut, Play, Radio, RefreshCw, ShieldCheck, Sparkles, UserRound, Video } from 'lucide-react';
 import './PleziahHub.css';
+import importedMediaManifest from '@/data/foreignLoveMediaManifest.json';
 
-type MediaItem = { id: string; creator_id: string; title: string; description: string | null; thumbnail_url: string | null; media_type: 'video'|'media_pack'; price: number | string; has_preview: boolean; duration_seconds: number | null; is_published?: boolean; creator_name?: string; creator_username?: string; premium_path?: string; preview_path?: string };
+type MediaItem = { id: string; creator_id: string; title: string; description: string | null; thumbnail_url: string | null; media_type: 'video'|'media_pack'|'image'; price: number | string; has_preview: boolean; duration_seconds: number | null; is_explicit?: boolean; is_published?: boolean; creator_name?: string; creator_username?: string; premium_path?: string; preview_path?: string };
 type Creator = {
   id: string; user_id?: string; display_name: string; username: string; bio: string | null;
   avatar_url: string | null; content_categories: string[] | null; session_price: number | string;
@@ -16,6 +17,17 @@ const emptyForm = { display_name: '', username: '', bio: '', avatar_url: '', age
 const contentOptions = ['Solo', 'Couples', 'LGBTQ+', 'Sensual', 'Roleplay', 'Fitness', 'Cosplay', 'Adult toys', 'Premium media packs'];
 const sexOptions = ['Woman', 'Man', 'Non-binary', 'Prefer not to say'];
 const preferenceOptions = ['Women', 'Men', 'All adults', 'Couples', 'LGBTQ+ audience'];
+
+// Imported creator media from the supplied ForeignLove V35 archive.
+// These are fallback catalogue profiles until matching Supabase creator records are connected.
+const importedCreators: Creator[] = (importedMediaManifest.models as Array<{id:string;name:string;username:string;photo:string}>).map(model => ({
+  id: `archive-${model.id}`, display_name: model.name, username: model.username,
+  bio: 'Creator profile with imported photos and videos. Profile details and pricing can be completed by the creator.',
+  avatar_url: model.photo, content_categories: ['Imported creator media'],
+  session_price: 0, media_pack_enabled: false, media_pack_price: null,
+  availability_status: 'offline', is_approved: true, is_published: true
+}));
+
 
 function AuthPanel({ onSignedIn }: { onSignedIn: () => void }) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -42,88 +54,61 @@ function AuthPanel({ onSignedIn }: { onSignedIn: () => void }) {
 }
 
 export function PleziahPage() {
-  const [creators, setCreators] = useState<Creator[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [query, setQuery] = useState(''); const [filter, setFilter] = useState('All'); const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null); const [creatorMedia, setCreatorMedia] = useState<(MediaItem & {previewUrl?:string})[]>([]); const [mediaLoading, setMediaLoading] = useState(false);
+  const [creators, setCreators] = useState<Creator[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [query, setQuery] = useState(''); const [filter, setFilter] = useState('All'); const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null); const [creatorMedia, setCreatorMedia] = useState<(MediaItem & {previewUrl?:string})[]>([]); const [mediaLoading, setMediaLoading] = useState(false); const [storyCreator,setStoryCreator]=useState<Creator|null>(null); const [storyConsent,setStoryConsent]=useState(false); const [storyAuth,setStoryAuth]=useState(false); const [storyNotice,setStoryNotice]=useState('');
   const load = useCallback(async () => {
     setLoading(true); setError('');
-    if (!supabase) { setCreators([]); setError('Connect this deployment to Supabase to load approved creator profiles.'); setLoading(false); return; }
+    if (!supabase) { setCreators(importedCreators); setError(''); setLoading(false); return; }
     const { data, error: e } = await supabase.from('pleziah_creators').select('id,display_name,username,bio,avatar_url,content_categories,session_price,media_pack_enabled,media_pack_price,availability_status').eq('is_approved', true).eq('is_published', true).order('created_at', { ascending: false });
-    if (e) setError(e.message); else setCreators((data ?? []) as Creator[]);
+    if (e) { setCreators(importedCreators); setError(''); } else {
+      const liveCreators = (data ?? []) as Creator[];
+      const liveUsernames = new Set(liveCreators.map(c => c.username.toLowerCase()));
+      setCreators([...liveCreators, ...importedCreators.filter(c => !liveUsernames.has(c.username.toLowerCase()))]);
+    }
     setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load]);
-  
   useEffect(() => {
     let active = true;
-
+    const client = supabase;
     const loadCreatorMedia = async () => {
-      if (!selectedCreator || !supabase) {
-        setCreatorMedia([]);
-        return;
-      }
-
-      // Capture the non-null Supabase client for nested async callbacks.
-      const client = supabase;
-
+      if (!selectedCreator) { setCreatorMedia([]); return; }
       setMediaLoading(true);
-
-      const { data, error: mediaError } = await client
-        .from('pleziah_media')
-        .select('id,creator_id,title,description,thumbnail_url,media_type,price,has_preview,duration_seconds')
-        .eq('creator_id', selectedCreator.id)
-        .eq('is_published', true)
-        .order('created_at', { ascending: false });
-
+      if (selectedCreator.id.startsWith('archive-')) {
+        const modelId = selectedCreator.id.replace('archive-', '');
+        const model = (importedMediaManifest.models as Array<{id:string;name:string;photos:string[];videos:string[]}>).find(entry => entry.id === modelId);
+        const localItems: (MediaItem & {previewUrl?:string})[] = model ? [
+          ...model.photos.map((url,index)=>({id:`${modelId}-photo-${index}`,creator_id:selectedCreator.id,title:`${selectedCreator.display_name} · Photo ${index+1}`,description:'Imported creator photo',thumbnail_url:url,media_type:'image' as const,price:0,has_preview:true,duration_seconds:null,is_explicit:true,previewUrl:url})),
+          ...model.videos.map((url,index)=>({id:`${modelId}-video-${index}`,creator_id:selectedCreator.id,title:`${selectedCreator.display_name} · Video ${index+1}`,description:'Imported creator video',thumbnail_url:null,media_type:'video' as const,price:0,has_preview:true,duration_seconds:null,is_explicit:true,previewUrl:url}))
+        ] : [];
+        setCreatorMedia(localItems); setMediaLoading(false); return;
+      }
+      if (!client) { setCreatorMedia([]); setMediaLoading(false); return; }
+      const { data, error: mediaError } = await client.from('pleziah_media').select('id,creator_id,title,description,thumbnail_url,media_type,price,has_preview,duration_seconds,is_explicit').eq('creator_id', selectedCreator.id).eq('is_published', true).order('created_at', { ascending: false });
       if (!active) return;
-
-      if (mediaError || !data) {
-        setCreatorMedia([]);
-        setMediaLoading(false);
-        return;
-      }
-
-      const { data: paths } = await client.rpc(
-        'public_pleziah_preview_paths',
-        { p_creator_id: selectedCreator.id }
-      );
-
-      const pathMap = new Map<string, string>(
-        (Array.isArray(paths) ? paths : []).map((row: any) => [
-          String(row.media_id),
-          String(row.preview_path)
-        ] as [string, string])
-      );
-
-      const items = await Promise.all(
-        (data as MediaItem[]).map(async item => {
-          const path = pathMap.get(item.id);
-          if (!path) return item;
-
-          const { data: signed } = await client.storage
-            .from('video-previews')
-            .createSignedUrl(path, 300);
-
-          return { ...item, previewUrl: signed?.signedUrl };
-        })
-      );
-
-      if (active) {
-        setCreatorMedia(items);
-        setMediaLoading(false);
-      }
+      if (mediaError || !data) { setCreatorMedia([]); setMediaLoading(false); return; }
+      const { data: paths } = await client.rpc('public_pleziah_preview_paths', { p_creator_id: selectedCreator.id });
+      const pathMap = new Map<string,string>((Array.isArray(paths)?paths:[]).map((row:any)=>[String(row.media_id),String(row.preview_path)] as [string,string]));
+      const items = await Promise.all((data as MediaItem[]).map(async item => {
+        const path = pathMap.get(item.id); if (!path) return item;
+        const { data: signed } = await client.storage.from('video-previews').createSignedUrl(path, 300);
+        return { ...item, previewUrl: signed?.signedUrl };
+      }));
+      if (active) { setCreatorMedia(items); setMediaLoading(false); }
     };
-
     void loadCreatorMedia();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [selectedCreator]);
-
   const filtered = creators.filter(c => (`${c.display_name} ${c.username} ${c.bio ?? ''} ${(c.content_categories ?? []).join(' ')}`).toLowerCase().includes(query.toLowerCase()) && (filter === 'All' || (filter === 'Live now' ? c.availability_status === 'live' : (c.content_categories ?? []).includes(filter))));
-  return <div className="pz-page"><section className="pz-hero"><div className="pz-hero-copy"><span className="pz-eyebrow"><Sparkles size={14}/> PLEZIAH · ADULTS ONLY · 18+</span><h1>Your vibe.<br/><em>Your creators.</em></h1><p>Discover independent adult creators, explore their profiles, and choose sessions or premium media packs on their terms.</p><div className="pz-hero-actions"><a className="pz-primary pz-link-button" href="#creators">Explore creators <ArrowUpRight size={17}/></a><Link className="pz-secondary" to="/creator/dashboard">Become a creator</Link></div><div className="pz-trust-row"><span><ShieldCheck size={15}/> 18+ only</span><span><BadgeCheck size={15}/> Approved profiles</span><span><LockKeyhole size={15}/> Secure account access</span></div></div><div className="pz-hero-art"><div className="pz-orbit pz-orbit-one"/><div className="pz-orbit pz-orbit-two"/><div className="pz-glow-card"><div className="pz-play-mark"><Play size={27} fill="currentColor"/></div><span>CREATOR-LED</span><strong>PLEZIAH</strong><small>Play for pleasure.</small></div><div className="pz-float-chip"><Radio size={15}/><span>Live status shown when verified</span></div></div></section>
-    <section className="pz-section" id="creators"><div className="pz-section-head"><div><span className="pz-eyebrow">THE CREATOR DIRECTORY</span><h2>Find your kind of creator</h2><p>Only approved, published profiles appear here.</p></div><button className="pz-refresh" onClick={()=>void load()} disabled={loading}><RefreshCw size={15}/> Refresh</button></div><div className="pz-discovery"><div className="pz-search"><CircleUserRound size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search creators or categories"/></div><div className="pz-filters">{['All','Live now','Solo','Couples','LGBTQ+','Sensual','Cosplay'].map(f=><button key={f} className={filter===f?'active':''} onClick={()=>setFilter(f)}>{f}</button>)}</div></div>
-      {loading ? <div className="pz-empty"><RefreshCw className="pz-spin" size={22}/><h3>Loading approved creators</h3><p>Connecting to the Pleziah directory…</p></div> : error ? <div className="pz-empty"><ShieldCheck size={24}/><h3>Creator directory needs setup</h3><p>{error}</p><small>Apply the Pleziah SQL migration and configure the frontend's Supabase URL and public key.</small></div> : filtered.length===0 ? <div className="pz-empty"><UserRound size={25}/><h3>No published profiles yet</h3><p>Creator profiles will appear here after an admin approves and publishes them.</p><Link to="/creator/dashboard" className="pz-primary pz-link-button">Apply as a creator <ArrowUpRight size={16}/></Link></div> : <div className="pz-creator-grid">{filtered.map(c=><article className="pz-creator-card" key={c.id}><div className="pz-creator-cover">{c.avatar_url?<img src={c.avatar_url} alt={`${c.display_name} profile`} loading="lazy"/>:<div className="pz-avatar-placeholder"><UserRound size={46}/></div>}<span className={`pz-status ${c.availability_status==='live'?'is-live':c.availability_status==='available'?'is-available':''}`}>{c.availability_status==='live'?<><i/> LIVE</>:c.availability_status==='available'?'AVAILABLE':'OFFLINE'}</span><button className="pz-favorite" aria-label={`Favorite ${c.display_name}`}><Heart size={17}/></button></div><div className="pz-creator-info"><div className="pz-creator-name"><div><h3>{c.display_name}</h3><span>@{c.username}</span></div><BadgeCheck size={17}/></div><p>{c.bio || 'Independent Pleziah creator.'}</p><div className="pz-tags">{(c.content_categories??[]).slice(0,3).map(t=><span key={t}>{t}</span>)}</div><div className="pz-price-row"><div><small>Session from</small><strong>${Number(c.session_price).toFixed(2)}</strong></div>{c.media_pack_enabled&&<div><small>Media pack</small><strong>${Number(c.media_pack_price??0).toFixed(2)}</strong></div>}</div><button className="pz-card-cta" onClick={()=>setSelectedCreator(c)}>View profile <ArrowUpRight size={15}/></button></div></article>)}</div>}
-    </section>{selectedCreator&&<div className="pz-modal-backdrop" role="dialog" aria-modal="true" aria-label={`${selectedCreator.display_name} creator profile`} onClick={()=>setSelectedCreator(null)}><section className="pz-profile-modal" onClick={e=>e.stopPropagation()}><button className="pz-modal-close" onClick={()=>setSelectedCreator(null)} aria-label="Close profile">×</button><div className="pz-modal-profile-head">{selectedCreator.avatar_url?<img src={selectedCreator.avatar_url} alt=""/>:<div className="pz-avatar-placeholder"><UserRound size={42}/></div>}<div><span className="pz-eyebrow">CREATOR PROFILE</span><h2>{selectedCreator.display_name}</h2><small>@{selectedCreator.username}</small><span className={`pz-status ${selectedCreator.availability_status==='live'?'is-live':''}`}>{selectedCreator.availability_status.toUpperCase()}</span></div></div><p>{selectedCreator.bio||'Independent Pleziah creator.'}</p><div className="pz-tags">{(selectedCreator.content_categories??[]).map(t=><span key={t}>{t}</span>)}</div><div className="pz-price-row"><div><small>Session from</small><strong>${Number(selectedCreator.session_price).toFixed(2)}</strong></div>{selectedCreator.media_pack_enabled&&<div><small>Media pack</small><strong>${Number(selectedCreator.media_pack_price??0).toFixed(2)}</strong></div>}</div><div className="pz-modal-media"><h3>Published videos and media</h3>{mediaLoading?<p>Loading media…</p>:creatorMedia.length===0?<p>No published media yet.</p>:creatorMedia.map(item=><article className="pz-media-card" key={item.id}>{item.thumbnail_url&&<img src={item.thumbnail_url} alt=""/>}<div><strong>{item.title}</strong><small>{item.media_type==='media_pack'?'Media pack':'Premium video'} · ${Number(item.price).toFixed(2)}</small><p>{item.description}</p>{item.previewUrl?<><video controls playsInline preload="metadata" src={item.previewUrl} onTimeUpdate={e=>{if(e.currentTarget.currentTime>=60){e.currentTarget.pause();e.currentTarget.currentTime=60;}}}/><small>Preview is limited to 60 seconds.</small></>:item.has_preview?<small>Preview upload is being processed or unavailable.</small>:<small>Preview not supplied.</small>}<button className="pz-unlock-button" disabled title="Payment checkout is not configured">Unlock full video · ${Number(item.price).toFixed(2)}</button><small>Paid unlock is not active until a compliant payment provider and secure entitlement endpoint are configured.</small></div></article>)}</div><div className="pz-checkout-notice"><LockKeyhole size={16}/><span>Booking and paid media unlocks will activate after a payment provider and server-side verification are configured. No payment is collected in this build.</span></div><button className="pz-primary" onClick={()=>setSelectedCreator(null)}>Back to creators</button></section></div>}<section className="pz-creator-cta"><div><span className="pz-eyebrow">FOR INDEPENDENT CREATORS</span><h2>Your profile. Your prices. Your audience.</h2><p>Apply, set your rates, choose your categories, and submit your profile for review.</p></div><Link to="/creator/dashboard" className="pz-primary pz-link-button">Open creator dashboard <ArrowUpRight size={16}/></Link></section><footer className="pz-footer"><span>PLEZIAH <small>PLAY FOR PLEASURE</small></span><p>18+ only. Respect, consent, privacy, and creator rights come first.</p><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link></footer></div>;
+  const orderedCreators = [...filtered].sort((a,b) => {
+    const count = (creator: Creator) => (importedMediaManifest.models as Array<{id:string;videos:string[]}>).find(m=>m.id===creator.id.replace('archive-',''))?.videos.length ?? 0;
+    return count(b)-count(a);
+  });
+
+  return <div className="pz-page">
+    <section className="pz-stories-section" aria-label="Creator stories"><div className="pz-stories-heading"><div><span className="pz-eyebrow">PLEZIAH STORIES</span><h2>Creator stories</h2><p>Quick previews from the people streaming on Pleziah.</p></div><span className="pz-stories-count">{creators.length} creators</span></div>{loading?<div className="pz-stories-loading">Loading creator stories…</div>:error?<div className="pz-stories-loading">Stories will appear when the creator directory is available.</div>:<div className="pz-story-rail">{orderedCreators.map(c=><button type="button" className="pz-story-tile" key={`story-${c.id}`} onClick={()=>{setStoryCreator(c);setSelectedCreator(c);setStoryConsent(false);setStoryAuth(false);setStoryNotice('');}}><span className="pz-story-ring"><span>{c.avatar_url?<img src={c.avatar_url} alt=""/>:<UserRound size={28}/>}</span></span><strong>{c.display_name}</strong><small>{c.availability_status==='live'?'LIVE STORY':'VIEW STORY'}</small></button>)}</div>}</section>
+    <section className="pz-section" id="creators"><div className="pz-section-head"><div><span className="pz-eyebrow">LIVE & FEATURED CREATORS</span><h2>Popular right now</h2><p>Watch a preview, explore the gallery or connect with a creator.</p></div><button className="pz-refresh" onClick={()=>void load()} disabled={loading}><RefreshCw size={15}/> Refresh</button></div><div className="pz-discovery"><div className="pz-search"><CircleUserRound size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search creators or categories"/></div><div className="pz-filters">{['All','Live now','Solo','Couples','LGBTQ+','Sensual','Cosplay'].map(f=><button key={f} className={filter===f?'active':''} onClick={()=>setFilter(f)}>{f}</button>)}</div></div>
+      {loading ? <div className="pz-empty"><RefreshCw className="pz-spin" size={22}/><h3>Loading approved creators</h3><p>Connecting to the Pleziah directory…</p></div> : error ? <div className="pz-empty"><ShieldCheck size={24}/><h3>Creator directory needs setup</h3><p>{error}</p><small>Apply the Pleziah SQL migration and configure the frontend's Supabase URL and public key.</small></div> : filtered.length===0 ? <div className="pz-empty"><UserRound size={25}/><h3>No published profiles yet</h3><p>Creator profiles will appear here after an admin approves and publishes them.</p><Link to="/creator/dashboard" className="pz-primary pz-link-button">Apply as a creator <ArrowUpRight size={16}/></Link></div> : <div className="pz-creator-grid">{orderedCreators.map(c=><article className="pz-creator-card" key={c.id}><div className="pz-creator-cover" role="button" tabIndex={0} onClick={()=>{setStoryCreator(c);setSelectedCreator(c);setStoryConsent(false);setStoryAuth(false);setStoryNotice('');}} onKeyDown={e=>{if(e.key==='Enter'){setStoryCreator(c);setSelectedCreator(c);setStoryConsent(false);setStoryAuth(false);setStoryNotice('');}}}>{(() => { const archive=(importedMediaManifest.models as Array<{id:string;photo:string;videos:string[]}>).find(m=>m.id===c.id.replace('archive-','')); return archive?.videos[0] ? <><img src={archive.photo} alt={`${c.display_name} creator preview`} loading="lazy"/><span className="pz-card-play" aria-hidden="true"><Play size={23}/></span></> : c.avatar_url?<img src={c.avatar_url} alt={`${c.display_name} profile`} loading="lazy"/>:<div className="pz-avatar-placeholder"><UserRound size={46}/></div>; })()}<span className={`pz-status ${c.availability_status==='live'?'is-live':c.availability_status==='available'?'is-available':''}`}>{c.availability_status==='live'?<><i/> LIVE</>:c.availability_status==='available'?'AVAILABLE':'OFFLINE'}</span><button className="pz-favorite" aria-label={`Favorite ${c.display_name}`}><Heart size={17}/></button></div><div className="pz-creator-info"><div className="pz-creator-name"><div><h3>{c.display_name}</h3><span>@{c.username}</span></div><BadgeCheck size={17}/></div><p>{c.bio || 'Independent Pleziah creator.'}</p><div className="pz-tags">{(c.content_categories??[]).slice(0,3).map(t=><span key={t}>{t}</span>)}<span>18+</span></div><div className="pz-price-row"><div><small>{c.id.startsWith('archive-')?'Pricing':'Session from'}</small><strong>{c.id.startsWith('archive-')?'On request':`$${Number(c.session_price).toFixed(2)}`}</strong></div>{c.media_pack_enabled&&<div><small>Media pack</small><strong>${Number(c.media_pack_price??0).toFixed(2)}</strong></div>}</div><div className="pz-model-actions"><button className="pz-card-cta" onClick={()=>{setStoryConsent(false);setSelectedCreator(c);}}>View gallery <ArrowUpRight size={15}/></button><button className="pz-go-live" onClick={()=>{setStoryCreator(c);setSelectedCreator(c);setStoryConsent(false);setStoryAuth(true);setStoryNotice('');}}>Go live <Radio size={15}/></button></div></div></article>)}</div>}
+    </section>{storyCreator&&<div className="pz-story-backdrop" role="dialog" aria-modal="true" aria-label={`${storyCreator.display_name} story`} onClick={()=>{setStoryCreator(null);setSelectedCreator(null);setStoryAuth(false);}}><section className="pz-story-viewer" onClick={e=>e.stopPropagation()}><button className="pz-story-close" onClick={()=>{setStoryCreator(null);setSelectedCreator(null);setStoryAuth(false);}} aria-label="Close story">×</button><div className="pz-story-top"><span className="pz-story-avatar">{storyCreator.avatar_url?<img src={storyCreator.avatar_url} alt=""/>:<UserRound size={20}/>}</span><div><strong>{storyCreator.display_name}</strong><small>@{storyCreator.username}</small></div><span className="pz-story-label">CREATOR STORY</span></div>{mediaLoading?<div className="pz-story-video-empty">Loading story…</div>:creatorMedia.filter(x=>x.previewUrl&&(x.media_type==='video'||x.media_type==='image')).length===0?<div className="pz-story-video-empty"><Video size={28}/><strong>No story preview available yet</strong><span>This creator has not published a playable preview.</span></div>:<>{creatorMedia.filter(x=>x.previewUrl&&(x.media_type==='video'||x.media_type==='image')).sort((a,b)=>(a.media_type==='video'?-1:1)-(b.media_type==='video'?-1:1)).slice(0,1).map(item=><div className="pz-story-video-wrap" key={item.id}>{item.is_explicit&&!storyConsent?<div className="pz-story-consent"><ShieldCheck size={30}/><span className="pz-eyebrow">MATURE CONTENT · 18+</span><h2>Before you continue</h2><p>This creator has marked this preview as explicit. Confirm that you are 18 or older and choose to view it. You can leave at any time.</p><button className="pz-primary" onClick={()=>setStoryConsent(true)}>I am 18+ · View story</button></div>:item.media_type==='image'?<img className="pz-story-video" src={item.previewUrl} alt={`${storyCreator.display_name} story`}/>:<video className="pz-story-video" controls playsInline autoPlay preload="metadata" poster={item.thumbnail_url||undefined} src={item.previewUrl}/>}</div>)}</>}{!storyAuth?<div className="pz-story-footer"><div><strong>{storyCreator.display_name}</strong><small>Respect boundaries. Chat only with consenting adults.</small></div><button className="pz-primary" onClick={()=>setStoryAuth(true)} disabled={creatorMedia.some(x=>x.is_explicit)&&!storyConsent}>Continue <ArrowUpRight size={16}/></button>{storyCreator.id.startsWith('archive-')&&<small className="pz-imported-note">Imported media profile · creator account linking is pending</small>}</div>:<div className="pz-story-auth"><h3>Sign in to continue</h3><p>Sign in securely before starting a creator conversation.</p><AuthPanel onSignedIn={()=>setStoryNotice(storyCreator.id.startsWith('archive-')?'You are signed in. This imported creator profile must be linked to a verified creator account before chat or paid messaging can start.':'You are signed in. Secure chat checkout must be enabled before paid messaging can begin.')}/>{storyNotice&&<p className="pz-message" role="status">{storyNotice}</p>}</div>}</section></div>}{selectedCreator&&!storyCreator&&<div className="pz-modal-backdrop" role="dialog" aria-modal="true" aria-label={`${selectedCreator.display_name} creator profile`} onClick={()=>setSelectedCreator(null)}><section className="pz-profile-modal" onClick={e=>e.stopPropagation()}><button className="pz-modal-close" onClick={()=>setSelectedCreator(null)} aria-label="Close profile">×</button><div className="pz-modal-profile-head">{selectedCreator.avatar_url?<img src={selectedCreator.avatar_url} alt=""/>:<div className="pz-avatar-placeholder"><UserRound size={42}/></div>}<div><span className="pz-eyebrow">CREATOR PROFILE</span><h2>{selectedCreator.display_name}</h2><small>@{selectedCreator.username}</small><span className={`pz-status ${selectedCreator.availability_status==='live'?'is-live':''}`}>{selectedCreator.availability_status.toUpperCase()}</span></div></div><p>{selectedCreator.bio||'Independent Pleziah creator.'}</p><div className="pz-tags">{(selectedCreator.content_categories??[]).map(t=><span key={t}>{t}</span>)}</div><div className="pz-price-row"><div><small>{selectedCreator.id.startsWith('archive-')?'Pricing':'Session from'}</small><strong>{selectedCreator.id.startsWith('archive-')?'On request':`$${Number(selectedCreator.session_price).toFixed(2)}`}</strong></div>{selectedCreator.media_pack_enabled&&<div><small>Media pack</small><strong>${Number(selectedCreator.media_pack_price??0).toFixed(2)}</strong></div>}</div><div className="pz-modal-media"><h3>Published videos and media</h3>{mediaLoading?<p>Loading media…</p>:creatorMedia.length===0?<p>No published media yet.</p>:creatorMedia.map(item=><article className="pz-media-card" key={item.id}>{item.thumbnail_url&&item.media_type!=='image'&&<img src={item.thumbnail_url} alt=""/>}<div><strong>{item.title}</strong><small>{item.media_type==='media_pack'?'Media pack':'Premium video'} · ${Number(item.price).toFixed(2)}</small><p>{item.description}</p>{item.previewUrl?item.is_explicit&&!storyConsent?<div className="pz-explicit-preview-gate"><ShieldCheck size={19}/><strong>18+ preview</strong><small>This creator media is awaiting content review. Confirm your age before viewing.</small><button type="button" onClick={()=>setStoryConsent(true)}>I am 18+ · View media</button></div>:item.media_type==='image'?<img className="pz-media-image" src={item.previewUrl} alt={`${selectedCreator.display_name} media`}/>:<><video controls playsInline preload="metadata" src={item.previewUrl} onTimeUpdate={e=>{if(e.currentTarget.currentTime>=60){e.currentTarget.pause();e.currentTarget.currentTime=60;}}}/><small>Preview is limited to 60 seconds.</small></>:item.has_preview?<small>Preview upload is being processed or unavailable.</small>:<small>Preview not supplied.</small>}{!selectedCreator.id.startsWith('archive-')&&<><button className="pz-unlock-button" disabled title="Payment checkout is not configured">Unlock full video · ${Number(item.price).toFixed(2)}</button><small>Paid unlock is not active until a compliant payment provider and secure entitlement endpoint are configured.</small></>}</div></article>)}</div><div className="pz-checkout-notice"><LockKeyhole size={16}/><span>Booking and paid media unlocks will activate after a payment provider and server-side verification are configured. No payment is collected in this build.</span></div><button className="pz-primary" onClick={()=>setSelectedCreator(null)}>Back to creators</button></section></div>}<section className="pz-creator-cta"><div><span className="pz-eyebrow">FOR INDEPENDENT CREATORS</span><h2>Your profile. Your prices. Your audience.</h2><p>Apply, set your rates, choose your categories, and submit your profile for review.</p></div><Link to="/creator/dashboard" className="pz-primary pz-link-button">Open creator dashboard <ArrowUpRight size={16}/></Link></section><footer className="pz-footer"><span>PLEZIAH <small>PLAY FOR PLEASURE</small></span><p>18+ only. Respect, consent, privacy, and creator rights come first.</p><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link></footer></div>;
 }
 
 function CreatorMediaManager({ userId }: { userId: string }) {
