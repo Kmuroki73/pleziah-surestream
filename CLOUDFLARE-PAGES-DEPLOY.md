@@ -7,7 +7,7 @@ This repository is a Vite + React application. Cloudflare Pages must publish the
 In **Workers & Pages → pleziah-surestream → Settings → Builds & deployments**, use:
 
 - Production branch: `main`
-- Root directory: repository root (leave the field blank or set `/`)
+- Root directory: leave blank (Cloudflare then uses the repository root)
 - Framework preset: **React (Vite)**
 - Build command: `npm run build`
 - Build output directory: `dist`
