@@ -314,7 +314,7 @@ begin
   v_role:=coalesce(current_setting('request.jwt.claim.role',true),'');
   if v_role<>'service_role' and not public.is_pleziah_admin() then raise exception 'Verified payment webhook or admin access required.'; end if;
   if p_amount<=0 or p_amount>5000 then raise exception 'Deposit amount is outside the allowed range.'; end if;
-  if coalesce(trim(p_provider_reference),'')='' then raise exception 'Payment reference is required.'; end if;
+  if coalesce(trim(p_provider),'')='' or coalesce(trim(p_provider_reference),'')='' then raise exception 'Payment provider and reference are required.'; end if;
   insert into public.pleziah_wallets(owner_user_id,wallet_type) values(p_fan_user_id,'fan')
     on conflict(owner_user_id,wallet_type) do nothing;
   select * into v_wallet from public.pleziah_wallets where owner_user_id=p_fan_user_id and wallet_type='fan' for update;
