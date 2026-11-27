@@ -4,12 +4,15 @@ import AgeGate from '@/components/AgeGate';
 import AuthCallback from '@/pages/AuthCallback';
 import { PleziahPage, CreatorDashboardPage, PleziahAdminPage } from '@/pages/PleziahHub';
 import AdultMarketplace from '@/pages/AdultMarketplace';
+import { WalletPage, AdminWalletPage } from '@/pages/WalletPage';
 
 export default function App() {
   return <BrowserRouter><AgeGate /><Routes>
     <Route path='/' element={<Layout><PleziahPage /></Layout>} />
     <Route path='/pleziah' element={<Navigate to='/' replace />} />
     <Route path='/marketplace' element={<Layout><AdultMarketplace /></Layout>} />
+    <Route path='/wallet' element={<Layout><WalletPage /></Layout>} />
+    <Route path='/admin/wallet' element={<AdminWalletPage />} />
     <Route path='/creator/dashboard' element={<Layout><CreatorDashboardPage /></Layout>} />
     <Route path='/admin/pleziah' element={<PleziahAdminPage />} />
     <Route path='/admin' element={<Navigate to='/admin/pleziah' replace />} />
