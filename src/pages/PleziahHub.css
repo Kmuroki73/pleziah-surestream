@@ -105,3 +105,27 @@
 
 /* Pleziah brand layer: burgundy, warm white and deep charcoal. */
 .pz-shell .v32-topbar{background:#100b0e;border-color:#3a202b}.pz-shell .v32-nav button.active{color:#f8edf1;border-color:#9e3f62}.pz-shell .v32-nav button:hover{color:#fff}.pz-shell .v32-account{background:#9e3f62;color:#fff}.pz-shell .v32-footer{border-color:#39232d;color:#bcaeb4}.pz-shell .brand-mark{background:#9e3f62;color:#fff}.pz-shell .brand-name{color:#fff}.pz-shell .brand-tagline{color:#bcaeb4}.pz-primary,.pz-card-cta,.pz-go-live{background:#9e3f62!important;color:#fff!important;border-color:#b45c7a!important}.pz-google{border-color:#624050!important;background:#1a1117!important;color:#fff!important}.pz-filters button.active{background:#351b27!important;color:#f5dfe7!important;border-color:#9e3f62!important}.pz-story-ring{border-color:#b45c7a!important}.pz-status.is-live{color:#f3a7bf!important}.pz-admin-links{display:flex;gap:9px;flex-wrap:wrap}.pz-age-gate-card .lime-button{background:#9e3f62;color:#fff}.pz-age-gate-card .dark-button{background:#20141b;color:#f7eaf0;border-color:#583346}
+
+
+/* V38 — gallery-first responsive media layout and country discovery */
+.pz-country-filter{display:flex;align-items:center;gap:10px;min-width:min(100%,260px);padding:10px 13px;border:1px solid #51303e;border-radius:12px;background:linear-gradient(135deg,#21151b,#120e12);color:#d58ba4;font-size:9px;font-weight:900;letter-spacing:.13em}
+.pz-country-filter select{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:600 13px Inter,system-ui,sans-serif}
+.pz-country-filter option{background:#171016;color:#fff}
+.pz-discovery{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.pz-discovery .pz-search{flex:1 1 260px}
+.pz-modal-backdrop{padding:12px;overflow-y:auto;align-items:start}
+.pz-profile-modal{width:min(900px,100%);max-height:calc(100dvh - 24px);padding:clamp(16px,3vw,28px);margin:auto;overscroll-behavior:contain}
+.pz-modal-media{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:14px}
+.pz-modal-media>h3,.pz-modal-media>p{grid-column:1/-1}
+.pz-media-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;padding:0;gap:0;background:linear-gradient(145deg,#1b141a,#100c10);border:1px solid #49303a;border-radius:15px}
+.pz-media-card>div{width:100%;box-sizing:border-box;padding:13px;display:grid;align-content:start;gap:8px}
+.pz-media-card .pz-media-thumb{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:0;background:#080608}
+.pz-media-card video{display:block;width:100%;max-height:380px;aspect-ratio:4/5;object-fit:contain;border-radius:10px;background:#050405}
+.pz-media-card .pz-media-image{width:100%;height:auto;max-height:420px;aspect-ratio:4/5;object-fit:contain;margin:0;background:#050405}
+.pz-media-card strong{font-size:14px;line-height:1.35;color:#fff;overflow-wrap:anywhere}
+.pz-media-card small{font-size:11px;line-height:1.45;color:#c6aab5}
+.pz-media-card p{font-size:12px;line-height:1.55;color:#b9aab0;overflow-wrap:anywhere}
+.pz-media-card .pz-unlock-button{cursor:default;text-align:center;padding:12px;font-size:12px;letter-spacing:.01em}
+.pz-profile-modal .pz-checkout-notice{grid-column:1/-1}
+@media(max-width:680px){.pz-modal-media{grid-template-columns:minmax(0,1fr);gap:12px}.pz-profile-modal{width:100%;padding:16px;border-radius:16px}.pz-modal-backdrop{padding:8px}.pz-media-card video{max-height:68dvh;aspect-ratio:9/12}.pz-media-card .pz-media-image{max-height:68dvh;aspect-ratio:4/5}.pz-country-filter{width:100%;box-sizing:border-box}.pz-discovery .pz-search{flex-basis:100%}}
+@media(min-width:681px) and (max-width:960px){.pz-modal-media{grid-template-columns:repeat(2,minmax(0,1fr))}}
