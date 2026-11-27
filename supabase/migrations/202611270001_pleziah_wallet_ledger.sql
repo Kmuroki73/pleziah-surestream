@@ -230,7 +230,107 @@ begin
   if not exists(select 1 from public.pleziah_creators where user_id=v_uid) then raise exception 'Only registered creators can request earnings withdrawals.'; end if;
   select coalesce(nullif(phone,''),nullif(raw_user_meta_data->>'payout_phone',''))
     into v_phone from auth.users where id=v_uid;
-  if v_phone is null or v_phone !~ '^\+[1-9][0-9]{7,14}$' then
+  if v_phone is null or v_phone !~ '^[+][1-9][0-9]{7,14} then
+    raise exception 'Add your international payout phone number in your account settings before withdrawing.';
+  end if;
+  select * into v_wallet from public.pleziah_wallets where owner_user_id=v_uid and wallet_type='creator' for update;
+  if not found or v_wallet.available_balance<p_amount then raise exception 'Insufficient available creator earnings.'; end if;
+  update public.pleziah_wallets set available_balance=available_balance-p_amount,held_balance=held_balance+p_amount,updated_at=now()
+    where id=v_wallet.id returning * into v_wallet;
+  insert into public.pleziah_withdrawal_requests(creator_user_id,amount,payout_phone)
+    values(v_uid,p_amount,v_phone) returning id into v_request_id;
+  insert into public.pleziah_wallet_ledger(wallet_id,entry_type,direction,amount,balance_after,reference_type,reference_id,description)
+    values(v_wallet.id,'withdrawal_hold','debit',p_amount,v_wallet.available_balance,'withdrawal',v_request_id,'Creator withdrawal request held for processing');
+  return v_request_id;
+end;
+$$;
+revoke all on function public.pleziah_request_creator_withdrawal(numeric) from public;
+grant execute on function public.pleziah_request_creator_withdrawal(numeric) to authenticated;
+
+create or replace function public.admin_list_pleziah_withdrawals()
+returns jsonb
+language plpgsql stable security definer
+set search_path=public,auth
+as $$
+declare v_rows jsonb;
+begin
+  if not public.is_pleziah_admin() then raise exception 'Admin access required.'; end if;
+  select coalesce(jsonb_agg(to_jsonb(w) || jsonb_build_object('display_name',c.display_name,'username',c.username) order by w.requested_at desc),'[]'::jsonb)
+    into v_rows
+    from public.pleziah_withdrawal_requests w
+    left join public.pleziah_creators c on c.user_id=w.creator_user_id;
+  return v_rows;
+end;
+$$;
+revoke all on function public.admin_list_pleziah_withdrawals() from public;
+grant execute on function public.admin_list_pleziah_withdrawals() to authenticated;
+
+create or replace function public.admin_process_pleziah_withdrawal(p_request_id uuid,p_action text,p_note text default '')
+returns boolean
+language plpgsql security definer
+set search_path=public,auth
+as $$
+declare
+  v_request public.pleziah_withdrawal_requests%rowtype;
+  v_wallet public.pleziah_wallets%rowtype;
+begin
+  if not public.is_pleziah_admin() then raise exception 'Admin access required.'; end if;
+  if p_action not in ('processing','paid','rejected') then raise exception 'Invalid withdrawal action.'; end if;
+  select * into v_request from public.pleziah_withdrawal_requests where id=p_request_id for update;
+  if not found then raise exception 'Withdrawal request not found.'; end if;
+  if v_request.status in ('paid','rejected') then raise exception 'This withdrawal request has already been closed.'; end if;
+  if p_action='processing' then
+    update public.pleziah_withdrawal_requests set status='processing',admin_note=coalesce(p_note,''),processed_by=auth.uid() where id=p_request_id;
+    return true;
+  end if;
+  select * into v_wallet from public.pleziah_wallets where owner_user_id=v_request.creator_user_id and wallet_type='creator' for update;
+  if p_action='paid' then
+    update public.pleziah_wallets set held_balance=held_balance-v_request.amount,updated_at=now() where id=v_wallet.id returning * into v_wallet;
+    insert into public.pleziah_wallet_ledger(wallet_id,entry_type,direction,amount,balance_after,reference_type,reference_id,description)
+      values(v_wallet.id,'withdrawal_paid','debit',v_request.amount,v_wallet.available_balance,'withdrawal',p_request_id,'Creator payout marked paid by admin');
+  else
+    update public.pleziah_wallets set held_balance=held_balance-v_request.amount,available_balance=available_balance+v_request.amount,updated_at=now() where id=v_wallet.id returning * into v_wallet;
+    insert into public.pleziah_wallet_ledger(wallet_id,entry_type,direction,amount,balance_after,reference_type,reference_id,description)
+      values(v_wallet.id,'withdrawal_released','credit',v_request.amount,v_wallet.available_balance,'withdrawal',p_request_id,'Rejected withdrawal returned to creator wallet');
+  end if;
+  update public.pleziah_withdrawal_requests set status=p_action,processed_at=now(),processed_by=auth.uid(),admin_note=coalesce(p_note,'') where id=p_request_id;
+  return true;
+end;
+$$;
+revoke all on function public.admin_process_pleziah_withdrawal(uuid,text,text) from public;
+grant execute on function public.admin_process_pleziah_withdrawal(uuid,text,text) to authenticated;
+
+-- Only a trusted payment webhook (service role) or administrator can credit a fan wallet
+-- after independently verifying a successful payment. No fan-facing balance mutation exists.
+create or replace function public.pleziah_credit_fan_wallet_after_payment(
+  p_fan_user_id uuid,p_amount numeric,p_provider text,p_provider_reference text
+)
+returns boolean
+language plpgsql security definer
+set search_path=public,auth
+as $$
+declare v_wallet public.pleziah_wallets%rowtype; v_role text;
+begin
+  v_role:=coalesce(current_setting('request.jwt.claim.role',true),'');
+  if v_role<>'service_role' and not public.is_pleziah_admin() then raise exception 'Verified payment webhook or admin access required.'; end if;
+  if p_amount<=0 or p_amount>5000 then raise exception 'Deposit amount is outside the allowed range.'; end if;
+  if coalesce(trim(p_provider),'')='' or coalesce(trim(p_provider_reference),'')='' then raise exception 'Payment provider and reference are required.'; end if;
+  insert into public.pleziah_wallets(owner_user_id,wallet_type) values(p_fan_user_id,'fan')
+    on conflict(owner_user_id,wallet_type) do nothing;
+  select * into v_wallet from public.pleziah_wallets where owner_user_id=p_fan_user_id and wallet_type='fan' for update;
+  if exists(select 1 from public.pleziah_wallet_ledger where wallet_id=v_wallet.id and idempotency_key=p_provider||':'||p_provider_reference) then return true; end if;
+  update public.pleziah_wallets set available_balance=available_balance+p_amount,updated_at=now()
+    where id=v_wallet.id returning * into v_wallet;
+  insert into public.pleziah_wallet_ledger(wallet_id,entry_type,direction,amount,balance_after,idempotency_key,description,metadata)
+    values(v_wallet.id,'deposit','credit',p_amount,v_wallet.available_balance,p_provider||':'||p_provider_reference,'Verified fan wallet deposit',jsonb_build_object('provider',p_provider,'provider_reference',p_provider_reference));
+  return true;
+end;
+$$;
+revoke all on function public.pleziah_credit_fan_wallet_after_payment(uuid,numeric,text,text) from public;
+grant execute on function public.pleziah_credit_fan_wallet_after_payment(uuid,numeric,text,text) to service_role,authenticated;
+
+commit;
+ then
     raise exception 'Add your international payout phone number in your account settings before withdrawing.';
   end if;
   select * into v_wallet from public.pleziah_wallets where owner_user_id=v_uid and wallet_type='creator' for update;
