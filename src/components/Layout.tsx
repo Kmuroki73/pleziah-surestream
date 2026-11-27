@@ -1,17 +1,18 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, Heart, Store, Radio, UserRound, ShieldCheck } from 'lucide-react';
+import { Menu, Heart, Store, Radio, UserRound, ShieldCheck, Wallet } from 'lucide-react';
 
 const navItems = [
   { label: 'Discover', icon: Heart, path: '/' },
   { label: 'Live', icon: Radio, path: '/#live' },
   { label: 'Marketplace', icon: Store, path: '/marketplace' },
+  { label: 'Wallet', icon: Wallet, path: '/wallet' },
   { label: 'Creator studio', icon: UserRound, path: '/creator/dashboard' },
 ];
 function Logo() { return <button className='brand-lockup' aria-label='Pleziah home' onClick={() => { window.location.href = '/'; }}><div className='brand-mark'><span>P</span></div><div><div className='brand-name'>PLEZIAH</div><div className='brand-tagline'>Adults only · Creator world</div></div></button>; }
 export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate(); const location = useLocation(); const [mobileNav, setMobileNav] = useState(false);
-  const activeNav = navItems.find(n => n.path === location.pathname)?.label ?? (location.pathname.startsWith('/creator') ? 'Creator studio' : location.pathname.startsWith('/marketplace') ? 'Marketplace' : 'Discover');
+  const activeNav = navItems.find(n => n.path === location.pathname)?.label ?? (location.pathname.startsWith('/creator') ? 'Creator studio' : location.pathname.startsWith('/marketplace') ? 'Marketplace' : location.pathname.startsWith('/wallet') ? 'Wallet' : 'Discover');
   const selectNav = (path: string) => { if(path.includes('#')) { navigate('/'); window.setTimeout(() => document.getElementById('live')?.scrollIntoView({behavior:'smooth'}), 80); } else navigate(path); setMobileNav(false); };
   return <div className='app-shell pz-shell'><div className='main-area'>
     <header className='v32-topbar pz-topbar'><div className='v32-brand'><Logo /></div>
