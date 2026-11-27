@@ -230,8 +230,7 @@ begin
   if not exists(select 1 from public.pleziah_creators where user_id=v_uid) then raise exception 'Only registered creators can request earnings withdrawals.'; end if;
   select coalesce(nullif(phone,''),nullif(raw_user_meta_data->>'payout_phone',''))
     into v_phone from auth.users where id=v_uid;
-  if v_phone is null or v_phone !~ '^[+][1-9][0-9]{7,14} then
-    raise exception 'Add your international payout phone number in your account settings before withdrawing.';
+  if v_phone is null or v_phone !~ '^[+][1-9][0-9]{7,14}$''Add your international payout phone number in your account settings before withdrawing.';
   end if;
   select * into v_wallet from public.pleziah_wallets where owner_user_id=v_uid and wallet_type='creator' for update;
   if not found or v_wallet.available_balance<p_amount then raise exception 'Insufficient available creator earnings.'; end if;
