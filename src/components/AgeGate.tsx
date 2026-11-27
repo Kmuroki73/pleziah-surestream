@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 
 const STORAGE_KEY = 'pleziah-age-confirmed-v1';
-const ADULT_ROUTES = ['/pleziah', '/creator/dashboard', '/admin/pleziah'];
+const ADULT_ROUTES = ['/', '/marketplace', '/creator/dashboard', '/admin/pleziah', '/privacy', '/terms'];
 export default function AgeGate() {
   const location = useLocation(); const navigate = useNavigate();
   const isAdultRoute = ADULT_ROUTES.some(path => location.pathname === path || location.pathname.startsWith(`${path}/`));
@@ -23,7 +23,7 @@ export default function AgeGate() {
       <div className="pz-age-mark">P</div>
       <span className="eyebrow">PLEZIAH · ADULTS ONLY</span>
       <h2 id="age-gate-title">Are you 18 or older?</h2>
-      {denied ? <><p>You cannot enter Pleziah. You can return to the football experience.</p><button className="dark-button" onClick={() => navigate('/', { replace: true })}>Return to football</button></> : <>
+      {denied ? <><p>You cannot enter Pleziah. This platform is strictly for adults aged 18 and over.</p><button className="dark-button" onClick={() => { window.location.href = 'https://www.google.com'; }}>Exit Pleziah</button></> : <>
         <p>This section is for adults only. Confirm that you are at least 18 before entering. This declaration is not identity verification.</p>
         <button className="lime-button age-gate-confirm" onClick={confirm}><ShieldCheck size={17} /> I am 18 or older — enter</button>
         <button className="dark-button age-gate-deny" onClick={() => setDenied(true)}>I am under 18</button>
