@@ -19,10 +19,28 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="/og-surestream.jpg" />
     <meta name="theme-color" content="#080a09" />
-  <link rel="manifest" href="/manifest.webmanifest" />
-</head>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <style>
+      html, body { min-height: 100%; margin: 0; background: #080a09; color: #f7f8f3; }
+      #app-boot { min-height: 100vh; box-sizing: border-box; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 28px; text-align: center; font-family: system-ui, sans-serif; }
+      #app-boot .brand { color: #f7f8f3; font-size: 13px; font-weight: 800; letter-spacing: .16em; }
+      #app-boot .brand span { color: #c6ff2e; }
+      #app-boot .spinner { width: 26px; height: 26px; border: 2px solid #2e3728; border-top-color: #c6ff2e; border-radius: 50%; animation: app-boot-spin .8s linear infinite; }
+      #app-boot h1 { margin: 0; font-size: 18px; }
+      #app-boot p { max-width: 440px; margin: 0; color: #929b8f; font-size: 13px; line-height: 1.6; }
+      @keyframes app-boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { #app-boot .spinner { animation: none; } }
+    </style>
+  </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main id="app-boot" role="status" aria-live="polite">
+        <div class="brand">PLEZIAH <span>×</span> SURESTREAM</div>
+        <div class="spinner" aria-hidden="true"></div>
+        <h1>Starting the experience…</h1>
+        <p>If this message remains visible, the application bundle did not start. Check the Cloudflare Pages build settings and the latest deployment log.</p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
