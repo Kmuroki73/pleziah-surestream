@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 
 const STORAGE_KEY = 'pleziah-age-confirmed-v1';
-const ADULT_ROUTES = ['/', '/marketplace', '/creator/dashboard', '/admin/pleziah', '/privacy', '/terms'];
+const ADULT_ROUTES = ['/', '/marketplace', '/creator/dashboard', '/admin/pleziah', '/admin/wallet', '/wallet', '/privacy', '/terms'];
 export default function AgeGate() {
   const location = useLocation(); const navigate = useNavigate();
   const isAdultRoute = ADULT_ROUTES.some(path => location.pathname === path || location.pathname.startsWith(`${path}/`));
