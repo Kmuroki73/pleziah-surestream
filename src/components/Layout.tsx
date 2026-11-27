@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, Heart, Store, Radio, UserRound, ShieldCheck, Wallet } from 'lucide-react';
+import { Menu, Heart, Store, Radio, UserRound, Wallet } from 'lucide-react';
 
 const navItems = [
   { label: 'Discover', icon: Heart, path: '/' },
@@ -21,6 +21,6 @@ export default function Layout({ children }: { children: ReactNode }) {
       <div className='v32-top-actions'><button className='v32-account' onClick={()=>selectNav('/creator/dashboard')}>Join Pleziah <span>↗</span></button></div>
     </header>
     <main className='main-content v32-content'>{children}</main>
-    <footer className='v32-footer pz-footer-shell'><span>© PLEZIAH</span><span>18+ only · Consent-led creator community · Private by design</span><button onClick={()=>selectNav('/admin/pleziah')}><ShieldCheck size={14}/> Admin</button></footer>
+    <footer className='v32-footer pz-footer-shell'><span>© PLEZIAH</span><span>18+ only · Consent-led creator community · Private by design</span></footer>
   </div><nav className='mobile-bottom v32-mobile-bottom' aria-label='Mobile navigation'>{navItems.map(({label,icon:Icon,path})=><button key={label} className={activeNav===label?'active':''} onClick={()=>selectNav(path)}><Icon size={18}/><span>{label}</span></button>)}</nav></div>;
 }
